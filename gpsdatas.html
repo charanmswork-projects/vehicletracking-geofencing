@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Vehicle GPS Sender</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>
+  <h2>Vehicle Tracking Active 🚗📍</h2>
+  <p><b>Status:</b> <span id="status">Starting...</span></p>
+  <p><b>Last server reply:</b> <span id="reply">None</span></p>
+
+  <script>
+    // We can use our laptop IP V4 address here
+    const backendURL = "http://192.168.0.101:8000/location";
+
+    const statusEl = document.getElementById("status");
+    const replyEl = document.getElementById("reply");
+
+    async function sendToBackend(lat, lon) {
+      const payload = {
+        lat: lat,
+        lon: lon,
+        ts: new Date().toISOString()
+      };
+
+      const res = await fetch(backendURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      replyEl.textContent = JSON.stringify(data);
+    }
+
+    function onSuccess(position) {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      statusEl.textContent = `Got GPS: ${lat.toFixed(6)}, ${lon.toFixed(6)} (sending...)`;
+
+      sendToBackend(lat, lon)
+        .then(() => statusEl.textContent = `Sent ${lat.toFixed(6)}, ${lon.toFixed(6)}`)
+        .catch(err => statusEl.textContent = `Send failed ${err}`);
+    }
+
+    function onError(err) {
+      statusEl.textContent = `GPS error (${err.code}): ${err.message}`;
+    }
+
+    // Ask for location permission and send every 2 seconds
+    setInterval(() => {
+      navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 0
+      });
+    }, 2000);
+  </script>
+</body>
+</html>
